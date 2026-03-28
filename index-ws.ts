@@ -1,13 +1,21 @@
 import { serve } from 'bun';
+import { Database } from 'bun:sqlite';
+import { server } from 'typescript';
 
-const clients = new Set();
+const clients = new Set<WebSocket>();
 
-// 👇 reusable broadcast
+// reusable broadcast
 function broadcast(data: string) {
   for (const client of clients) {
     client.send(data);
   }
 }
+
+process.on('SIGINT', () => {
+  server.close(() => {
+    shutDownDb();
+  });
+});
 
 serve({
   port: 3000,
@@ -31,12 +39,12 @@ serve({
 
   websocket: {
     open(ws) {
+      db.run('INSERT INTO visitors(count , time)');
       clients.add(ws);
 
       const numClients = clients.size;
       console.log('Clients connected:', numClients);
 
-      // 👇 use broadcast
       broadcast(`Current visitors: ${numClients}`);
     },
 
@@ -56,3 +64,39 @@ serve({
     },
   },
 });
+
+/**
+ * Database setup (Bun SQLite)
+ */
+
+const db = new Database(':memory:');
+
+// Create table (no serialize, direct execution)
+db.run(`
+  CREATE TABLE IF NOT EXISTS visitors (
+    count INTEGER,
+    time TEXT
+  )
+`);
+
+// Insert example row (optional)
+db.run('INSERT INTO visitors (count, time) VALUES (?, ?)', [
+  1,
+  new Date().toISOString(),
+]);
+
+// Query function
+function getCounts() {
+  const stmt = db.query('SELECT * FROM visitors');
+  const rows = stmt.all();
+
+  console.log(rows);
+}
+
+// Call it to test
+getCounts();
+function shutDownDb() {
+  getCounts();
+  console.log('Shutting down db');
+  db.close;
+}
