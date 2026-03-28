@@ -2,8 +2,8 @@
 Bun.serve({
   port: 3000,
   fetch(req) {
-    return new Response("Hello from Bun server!");
+    return new Response('Hello from Bun server!');
   },
 });
 
-console.log("Server running on http://localhost:3000");
+console.log('Server running on http://localhost:3000');
